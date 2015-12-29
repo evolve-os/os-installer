@@ -60,8 +60,12 @@ class InstallerEngine:
                         cmd = "mkfs.%s -q %s" % (partition.format_as, partition.partition.path)
                     elif (partition.format_as == "xfs"):
                         cmd = "mkfs.%s -f %s" % (partition.format_as, partition.partition.path)
+                    elif (partition.format_as in ["ext", "ext3", "ext4"]):
+                        cmd = "mkfs.%s -F %s" % (partition.format_as, partition.partition.path)
+                    elif (partition.format_as == "btrfs"):
+                        cmd = "mkfs.%s -f %s" % (partition.format_as, partition.partition.path)
                     else:
-                        cmd = "mkfs.%s %s" % (partition.format_as, partition.partition.path) # works with bfs, btrfs, ext2, ext3, ext4, minix, msdos, ntfs, vfat
+                        cmd = "mkfs.%s %s" % (partition.format_as, partition.partition.path) # works with bfs, minix, msdos, ntfs, vfat
 					
                 print "EXECUTING: '%s'" % cmd
                 p = Popen(cmd, shell=True)
@@ -216,7 +220,7 @@ class InstallerEngine:
                     pass
                     
             # Steps:
-            our_total = 10
+            our_total = 6
             our_current = 0
             # chroot
             print " --> Chrooting"
@@ -237,6 +241,9 @@ class InstallerEngine:
             # can happen
             if(os.path.exists("/target/home/%s" % live_user)):
                 self.do_run_in_chroot("rm -rf /home/%s" % live_user)
+            # Our overriden default 
+            if os.path.exists("/target/var/lib/AccountsService/users/%s" % live_user):
+                self.do_run_in_chroot("rm -f /var/lib/AccountsService/users/%s" % live_user)
 
             # Probably SolusOS specific, remove live from sudoers
             self.do_run_in_chroot("sed -e '/live ALL=/d' -i /etc/sudoers")
@@ -247,33 +254,21 @@ class InstallerEngine:
             self.do_run_in_chroot("rm /etc/machine-id")
             self.do_run_in_chroot("systemd-machine-id-setup")
 
-            # Temporary, replace the lightdm.conf file. Enable autologin later in our release cycle
-            lightdm_source = os.path.join(RESOURCE_DIR, "lightdm.conf")
-            lightdm_target = "/target/etc/lightdm/lightdm.conf"
-            shutil.copy2(lightdm_source, lightdm_target)
-            
+            if os.path.exists("/target/etc/gdm"):
+                gdm_source = os.path.join(RESOURCE_DIR, "gdm.conf")
+                gdm_target = "/target/etc/gdm/custom.conf"
+                try:
+                    shutil.copy2(gdm_source, gdm_target)
+                except Exception, e:
+                    print("GDM: %s" % e)
+                    pass
+
             # Again SolusOS specific, but remove the installer from the image
             # We need to get the configuration done via dbus eventually.
             our_current += 1
             self.update_progress(total=our_total, current=our_current, message=_("Removing live configuration (installer)"))
-            self.do_run_in_chroot("pisi remove os-installer --ignore-comar")
+            self.do_run_in_chroot("eopkg remove os-installer --ignore-comar")
 
-            # add new user
-            print " --> Adding new user"
-            our_current += 1
-            self.update_progress(total=our_total, current=our_current, message=_("Adding users to system"))
-
-            # Add all users
-            newusers = open("/target/tmp/newusers.conf", "w")
-            for user in setup.users:
-                groups = "-G sudo,audio,video,cdrom" if user.admin else "-G audio,video,cdrom"
-                cmd = "useradd -s %s -c \'%s\' %s -m %s" % ("/bin/bash", user.realname, groups, user.username)
-                self.do_run_in_chroot(cmd)
-                            
-                newusers.write("%s:%s\n" % (user.username, user.password))
-            newusers.close()
-            self.do_run_in_chroot("cat /tmp/newusers.conf | chpasswd")
-            self.do_run_in_chroot("rm -rf /tmp/newusers.conf")
             # Disable direct use of root account
             self.do_run_in_chroot("passwd -d root")
             
@@ -287,7 +282,7 @@ class InstallerEngine:
             fstab = open("/target/etc/fstab", "a")
             fstab.write("proc\t/proc\tproc\tdefaults\t0\t0\n")
             for partition in setup.partitions:
-                if (partition.mount_as is not None and partition.mount_as != "None"):
+                if (partition.mount_as is not None and partition.mount_as != "None":
                     partition_uuid = self.get_uuid(partition.partition.path)
                                         
                     fstab.write("# %s\n" % (partition.partition.path))                            
@@ -302,10 +297,13 @@ class InstallerEngine:
                         fstab_mount_options = "rw,errors=remount-ro"
                     else:
                         fstab_mount_options = "defaults"
-                        
-                    if(partition.type == "swap"):                    
+
+                    if partition.type == "swap":
+                        # systemd's gpt generator automounts these guys
+                        if partition.partition.disk is not None and partition.partition.disk.type == "gpt":
+                            continue
                         fstab.write("%s\tswap\tswap\tsw\t0\t0\n" % partition_uuid)
-                    else:                                                    
+                    else:
                         fstab.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (partition_uuid, partition.mount_as, partition.type, fstab_mount_options, "0", fstab_fsck_option))
             if self.efi_mode and setup.grub_device is not None:
                 fstab.write("%s\t/boot/efi\tvfat\tdefaults\t0\t0\n" % self.get_uuid(setup.grub_device))
@@ -329,40 +327,6 @@ class InstallerEngine:
             hostsfh.write("ff02::2 ip6-allrouters\n")
             hostsfh.write("ff02::3 ip6-allhosts\n")
             hostsfh.close()
-
-            # Set the locale
-            print " --> Set locale"
-            our_current += 1
-            self.update_progress(total=our_total, current=our_current, message=_("Setting locale"))
-            localefh = open("/target/etc/locale.conf", "w")
-            lang = setup.language
-            if not lang.endswith(".utf8"):
-                    lc = lang.split(".")[0]
-                    lang = "%s.utf8" % lc
-            localefh.write("LANG=%s\n" % lang)
-            localefh.close()
-
-            # Set the timezone
-            print " --> Setting timezone"
-            our_current += 1
-            self.update_progress(total=our_total, current=our_current, message=_("Setting timezone"))
-            timezonepath = "/usr/share/zoneinfo/%s" % setup.timezone
-            self.do_run_in_chroot("ln -s %s /etc/localtime" % timezonepath)
-
-            # Set the keyboard layout
-            print " --> Setting keyboard layout"
-            our_current += 1
-            self.update_progress(total=our_total, current=our_current, message=_("Setting keyboard options"))
-            keyboarddir = "/etc/X11/xorg.conf.d"
-            self.do_run_in_chroot("mkdir -p %s" % keyboarddir)
-            keyboardfh = open("/target/etc/X11/xorg.conf.d/00-keyboard.conf", "w")
-            keyboardfh.write("""Section "InputClass"
-        Identifier "system-keyboard"
-        MatchIsKeyboard "on"
-        Option "XkbModel" "%s"
-        Option "XkbLayout" "%s"
-EndSection\n""" % (setup.keyboard_model, setup.keyboard_layout))
-            keyboardfh.close()
             
             # write MBR (grub)
             print " --> Configuring bootloader"
@@ -370,8 +334,8 @@ EndSection\n""" % (setup.keyboard_model, setup.keyboard_layout))
             if(setup.grub_device is not None):
                 self.update_progress(pulse=True, total=our_total, current=our_current, message=_("Installing bootloader"))
                 if self.efi_mode:
-                    print " --> Installing gummiboot"
-                    self.do_gummy(our_total, our_current)
+                    print " --> Installing goofiboot"
+                    self.do_goofi(our_total, our_current)
                 else:
                     print " --> Running grub-install"
                     self.do_run_in_chroot("grub-install --force %s" % setup.grub_device)
@@ -434,16 +398,16 @@ EndSection\n""" % (setup.keyboard_model, setup.keyboard_layout))
         return t1
 
     def get_efi_dir(self, base):
-        return self.get_ichild(base, "efi")
+        return self.get_ichild(base, "EFI")
 
     def get_loader_dir(self, base):
         return self.get_ichild(base, "loader")
 
     def get_efi_boot_dir(self, base):
-        return self.get_ichild(self.get_efi_dir(base), "boot")
+        return self.get_ichild(self.get_efi_dir(base), "Boot")
 
     def get_efi_boot_file(self, base):
-        return self.get_ichild(self.get_efi_boot_dir(base), "bootx64.efi")
+        return self.get_ichild(self.get_efi_boot_dir(base), "BOOTX64.EFI")
 
     def get_loader_entries(self, base):
         return self.get_ichild(self.get_loader_dir(base), "entries")
@@ -451,27 +415,49 @@ EndSection\n""" % (setup.keyboard_model, setup.keyboard_layout))
     def get_solus_dir(self, base):
         return self.get_ichild(base, "solus")
 
-    def do_gummy(self, our_total, our_current):
+    def do_goofi(self, our_total, our_current):
         self.update_progress(pulse=True, total=our_total, current=our_current, message=_("Configuring bootloader"))
         tgt = self.get_efi_boot_file("/target/boot/efi")
-        if not os.path.exists(tgt):
-            dirn = self.get_efi_boot_dir("/target/boot/efi")
-            if not os.path.exists(dirn):
-                os.makedirs(dirn)
-            shutil.copy("/usr/lib/gummiboot/gummibootx64.efi", tgt)
 
-        entfile = os.path.join(self.get_loader_dir("/target/boot/efi"), "default.conf")
+        # Sanity
+        if not os.path.exists("/target/boot/efi"):
+            try:
+                os.makedirs("/target/boot/efi")
+            except Exception, e:
+                print("Unable to make dirs: %s" % e)
+                return
+
+        # Ensure they get efivars too
+        cmd = "goofiboot install --path=%s" % "/target/boot/efi"
+        retcode = 0
+        try:
+            p = Popen(cmd, shell=True)
+            p.wait()
+            retcode = p.returncode
+        except Exception, e:
+            print("Failed to install goofiboot: %s" % e)
+            return
+        if retcode != 0:
+            print("Failed to install goofiboot")
+            return
+
+        # Set the default entry
+        entfile = os.path.join(self.get_loader_dir("/target/boot/efi"), "loader.conf")
         if not os.path.exists(entfile):
             dirn = self.get_loader_dir("/target/boot/efi")
             if not os.path.exists(dirn):
                 os.makedirs(dirn)
             with open(entfile, "w") as defconf:
-                defconf.write("default Solus\ntimeout 4\n")
+                defconf.write("default solus\ntimeout 4\n")
+
+        # Write the Solus entry
         solfile = "/target/boot/efi/loader/entries/solus.conf"
         if not os.path.exists(os.path.dirname(solfile)):
             os.makedirs(os.path.dirname(solfile))
         with open(solfile, "w") as solconf:
-            solconf.write("title Solus\nlinux /solus/kernel\ninitrd /solus/initramfs\noptions root=%s quiet\n" % self.root_partition)
+            solconf.write("title Solus Operating System\nlinux /solus/kernel\ninitrd /solus/initramfs\noptions root=%s quiet\n" % self.root_partition)
+
+        # Now install the Solus kernel/initramfs.
         kver = os.uname()[2]
         sdir = self.get_solus_dir("/target/boot/efi")
         if not os.path.exists(sdir):
@@ -520,39 +506,17 @@ EndSection\n""" % (setup.keyboard_model, setup.keyboard_layout))
             dst.write(read)
         input.close()
         dst.close()
-
-class User:
-
-    def __init__(self, username, realname, password, autologin, admin):
-        self.username = username
-        self.realname = realname
-        self.password = password
-        self.autologin = autologin
-        self.admin = admin
         
         
 # Represents the choices made by the user
 class Setup(object):
-    language = None
-    timezone = None
-    timezone_code = None
-    keyboard_model = None    
-    keyboard_layout = None    
     partitions = [] #Array of PartitionSetup objects
     hostname = None 
     grub_device = None
     target_disk = None
-    users = None
-    
-    #Descriptions (used by the summary screen)    
-    keyboard_model_description = None
-    keyboard_layout_description = None
-    keyboard_variant_description = None
     
     def print_setup(self):
         print "-------------------------------------------------------------------------"
-        print "language: %s" % self.language
-        print "timezone: %s (%s)" % (self.timezone, self.timezone_code)        
         print "hostname: %s " % self.hostname
         print "grub_device: %s " % self.grub_device
         print "target_disk: %s " % self.target_disk

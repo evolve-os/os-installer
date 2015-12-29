@@ -3,7 +3,7 @@
 #
 #  summary.py - Installation options summary
 #  
-#  Copyright 2013 Ikey Doherty <ikey@solusos.com>
+#  Copyright (C) 2013-2015 Ikey Doherty <ikey@solus-project.com>
 #  
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ class SummaryItem(Gtk.VBox):
 
         frame = Gtk.Frame()
         container = Gtk.HBox()
-        frame.set_shadow_type(Gtk.ShadowType.OUT)
+        frame.set_shadow_type(Gtk.ShadowType.NONE)
 
         # title
         self.title = Gtk.Label("<big>%s</big>" % page.get_title())

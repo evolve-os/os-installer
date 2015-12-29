@@ -1,10 +1,10 @@
 from setuptools import setup
             
 setup(name         = 'os-installer',
-      version      = '1.0',
+      version      = '5.2',
       author       = "Ikey Doherty",
-      author_email = "ikey@solusos.com",
-      license      = "GPLv2+",
-      packages     = ['os_installer', 'os_installer.pages', 'os_installer.widgets'],
+      author_email = "ikey@solus-project.com",
+      license      = "GPL-2.0",
+      packages     = ['os_installer', 'os_installer.pages'],
       scripts      = ['os-installer-gtk'],
 )
