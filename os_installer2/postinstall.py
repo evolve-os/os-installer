@@ -737,6 +737,7 @@ class PostInstallBootloader(PostInstallStep):
         # Set the LUKS Container UUID
         if self.is_encrypted_install():
             luks_uuid = self.get_luks_uuid()
+            options += " vconsole.keymap={}".format(self.info.keyboard)
             options += " rd.luks.uuid={}".format(luks_uuid)
 
         # Add the resume from swap parameter if necessary
@@ -846,6 +847,7 @@ class PostInstallBootloader(PostInstallStep):
         # Now write our loader.config itself..
         cmdline = "root=UUID={} quiet ro".format(uuid)
         if self.is_encrypted_install():
+            cmdline += " vconsole.keymap={}".format(self.info.keyboard)
             cmdline += " rd.luks.uuid={}".format(self.get_luks_uuid())
 
         # Resume from swap
