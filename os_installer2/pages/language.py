@@ -47,30 +47,35 @@ class InstallerLanguagePage(BasePage):
 
     # Main content
     listbox = None
-    moar_button = None
+
+    # SearchEntry
+    searchbox = None
 
     info = None
 
     def __init__(self):
         BasePage.__init__(self)
 
+
+        self.searchbox = Gtk.SearchEntry()
+        self.searchbox.set_width_chars(30)
+        self.searchbox.set_halign(Gtk.Align.CENTER)
+        self.searchbox.set_margin_top(20)
+        self.searchbox.connect("search-changed", self.search_filter)
+        self.add(self.searchbox)
+
         self.scroll = Gtk.ScrolledWindow(None, None)
         self.scroll.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
-        self.scroll.set_border_width(40)
+        self.scroll.set_border_width(20)
         self.add(self.scroll)
 
         self.listbox = Gtk.ListBox()
         self.scroll.add(self.listbox)
         self.scroll.set_halign(Gtk.Align.CENTER)
-        self.listbox.set_size_request(500, -1)
 
-        # Fix up policy
-        self.scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+        self.scroll.set_size_request(500, 400)
 
-        self.moar_button = Gtk.Image.new_from_icon_name("view-more-symbolic",
-                                                        Gtk.IconSize.MENU)
-        self.moar_button.set_property("margin", 8)
-        self.moar_button.show_all()
+        self.scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.listbox.connect_after("row-selected", self.on_row_select)
 
     def on_row_select(self, lbox, newrb=None):
@@ -81,9 +86,6 @@ class InstallerLanguagePage(BasePage):
             self.info.owner.set_can_next(False)
             return
         child = newrb.get_child()
-        if child == self.moar_button:
-            self.init_remaining()
-            return
         self.info.locale = child.lc_code
         self.info.locale_sz = child.dname
         self.info.owner.set_can_next(True)
@@ -91,25 +93,29 @@ class InstallerLanguagePage(BasePage):
     def do_expensive_init(self):
         """ Do the hard work of actually setting up the view """
         Gdk.threads_enter()
-        for lc in default_locales:
+        all_locales = GnomeDesktop.get_all_locales()
+        all_locales.sort()
+        for lc in all_locales:
             self.listbox.add(LcLabel(lc))
-        self.listbox.add(self.moar_button)
         Gdk.threads_leave()
 
+
+    def search_filter(self, entry):
+        """ Provide the search results """
+        for row in self.listbox:
+            row.destroy()
+        entry_str = entry.get_text().lower()
+        all_locales = GnomeDesktop.get_all_locales()
+        all_locales.sort()
+        for lc in all_locales:
+             if entry_str == "":
+                self.listbox.add(LcLabel(lc))
+             else:
+                 if LcLabel(lc).get_text().lower().startswith(entry_str):
+                    self.listbox.add(LcLabel(lc))
+    
     def init_remaining(self):
         """ Add the rest to the list """
-        self.scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        locales = GnomeDesktop.get_all_locales()
-        self.moar_button.get_parent().hide()
-        appends = list()
-        for lc in locales:
-            if lc in default_locales:
-                continue
-            item = LcLabel(lc)
-            appends.append(item)
-        appends.sort(key=lambda x: x.dname.lower())
-        for item in appends:
-            self.listbox.add(item)
 
     def prepare(self, info):
         # Nothing to seed with.
