@@ -34,7 +34,7 @@ INDEX_PARTITION_FREE_SPACE = 6
 INDEX_PARTITION_OBJECT = 7
 INDEX_PARTITION_SIZE_NUM = 8
 
-ACCEPTABLE_FS_TYPES = ["ext", "ext2", "ext3", "ext4"]
+ACCEPTABLE_FS_TYPES = ["ext", "ext2", "ext3", "ext4", "xfs"]
 NO_HAZ_ASSIGN = "Unassigned"
 
 

@@ -689,6 +689,7 @@ class UserPartitionStrategy(DiskStrategy):
     root_part = None
     home_part = None
     home_format = False
+    home_fstype = None
     swap_part = None
     swap_format = False
 
@@ -709,10 +710,11 @@ class UserPartitionStrategy(DiskStrategy):
         """ Set the root partition to use """
         self.root_part = part
 
-    def set_home_partition(self, part, fmt):
+    def set_home_partition(self, part, fmt, fstype):
         """ Set the home partition to use and maybe format """
         self.home_part = part
         self.home_format = fmt
+        self.home_fstype = fstype
 
     def set_swap_partition(self, part, fmt):
         """ Set the swap partition to use and maybe format """
@@ -768,11 +770,11 @@ class UserPartitionStrategy(DiskStrategy):
         if self.home_part:
             dev = self.find_device(info.prober, self.home_part)
             if not self.home_format:
-                fmt = self.find_format(info.prober, self.home_part)
-                self.push_operation(DiskOpUseHome(dev, self.home_part, fmt))
+                self.home_fstype = self.find_format(info.prober, self.home_part)
+                self.push_operation(DiskOpUseHome(dev, self.home_part, self.home_fstype))
             else:
-                self.push_operation(DiskOpFormatHome(dev, self.home_part))
-                self.push_operation(DiskOpUseHome(dev, self.home_part, "ext4"))
+                self.push_operation(DiskOpFormatHome(dev, self.home_part, self.home_fstype))
+                self.push_operation(DiskOpUseHome(dev, self.home_part, self.home_fstype))
 
 
 class DiskStrategyManager:

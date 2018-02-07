@@ -777,8 +777,11 @@ class DiskOpFormatSwapLate(DiskOpFormatPartition):
 class DiskOpFormatHome(DiskOpFormatPartition):
     """ Format the home partition """
 
-    def __init__(self, device, part):
-        DiskOpFormatPartition.__init__(self, device, part, "ext4")
+    fstype = None
+
+    def __init__(self, device, part, fstype):
+        DiskOpFormatPartition.__init__(self, device, part, fstype)
+        self.fstype = fstype
 
     def describe(self):
         return "Format {} as {} home partition".format(
@@ -788,7 +791,11 @@ class DiskOpFormatHome(DiskOpFormatPartition):
         if simulate:
             return True
 
-        cmd = "mkfs.ext4 -F {}".format(self.part.path)
+        if self.fstype == "ext4":
+            cmd = "mkfs.ext4 -F {}".format(self.part.path)
+        elif self.fstype == "xfs":
+            cmd = "mkfs.xfs -f {}".format(self.part.path)
+        
         try:
             subprocess.check_call(cmd, shell=True)
         except Exception as e:
