@@ -706,9 +706,10 @@ class UserPartitionStrategy(DiskStrategy):
                 return op.part.path
         return None
 
-    def set_root_partition(self, part):
+    def set_root_partition(self, part, fstype):
         """ Set the root partition to use """
         self.root_part = part
+        self.home_fstype = fstype
 
     def set_home_partition(self, part, fmt, fstype):
         """ Set the home partition to use and maybe format """

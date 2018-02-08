@@ -685,8 +685,9 @@ class DiskOpFormatPartition(BaseDiskOp):
 class DiskOpFormatRoot(DiskOpFormatPartition):
     """ Format the root partition """
 
-    def __init__(self, device, part):
-        DiskOpFormatPartition.__init__(self, device, part, "ext4")
+    def __init__(self, device, part, format_type):
+        self.fstype = fstype
+        DiskOpFormatPartition.__init__(self, device, part, format_type)
 
     def describe(self):
         return "Format {} as {} root partition".format(
@@ -696,7 +697,10 @@ class DiskOpFormatRoot(DiskOpFormatPartition):
         if simulate:
             return True
 
-        cmd = "mkfs.ext4 -F {}".format(self.part.path)
+        if self.format_type == "ext4"
+            cmd = "mkfs.ext4 -F {}".format(self.part.path)
+        elif self.format_type == "xfs"
+            cmd = "xfs -f {}".format(self.part.path)
         try:
             subprocess.check_call(cmd, shell=True)
         except Exception as e:
@@ -708,8 +712,8 @@ class DiskOpFormatRoot(DiskOpFormatPartition):
 class DiskOpFormatRootLate(DiskOpFormatPartition):
     """ Format the root partition """
 
-    def __init__(self, device, part):
-        DiskOpFormatPartition.__init__(self, device, part, "ext4")
+    def __init__(self, device, part, format_type):
+        DiskOpFormatPartition.__init__(self, device, part, format_type)
 
     def describe(self):
         return "Format {} as {} root partition".format(
@@ -719,7 +723,10 @@ class DiskOpFormatRootLate(DiskOpFormatPartition):
         return True
 
     def apply_format(self, disk):
-        cmd = "mkfs.ext4 -F {}".format(self.part.path)
+        if self.format_type == "ext4"
+            cmd = "mkfs.ext4 -F {}".format(self.part.path)
+        elif self.format_type == "xfs"
+            cmd = "xfs -f {}".format(self.part.path)
         try:
             subprocess.check_call(cmd, shell=True)
         except Exception as e:
@@ -777,11 +784,8 @@ class DiskOpFormatSwapLate(DiskOpFormatPartition):
 class DiskOpFormatHome(DiskOpFormatPartition):
     """ Format the home partition """
 
-    fstype = None
-
-    def __init__(self, device, part, fstype):
-        DiskOpFormatPartition.__init__(self, device, part, fstype)
-        self.fstype = fstype
+    def __init__(self, device, part, format_type):
+        DiskOpFormatPartition.__init__(self, device, part, format_type)
 
     def describe(self):
         return "Format {} as {} home partition".format(
@@ -791,10 +795,10 @@ class DiskOpFormatHome(DiskOpFormatPartition):
         if simulate:
             return True
 
-        if self.fstype == "ext4":
+        if self.format_type == "ext4"
             cmd = "mkfs.ext4 -F {}".format(self.part.path)
-        elif self.fstype == "xfs":
-            cmd = "mkfs.xfs -f {}".format(self.part.path)
+        elif self.format_type == "xfs"
+            cmd = "xfs -f {}".format(self.part.path)
         
         try:
             subprocess.check_call(cmd, shell=True)

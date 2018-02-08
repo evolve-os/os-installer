@@ -420,16 +420,18 @@ class ManualPage(Gtk.Box):
                     swap_obj = swap_obj.part
             elif point == '/home':
                 home_format = row[INDEX_PARTITION_FORMAT]
+                home_fs = row[INDEX_PARTITION_TYPE]
                 home_obj = row[INDEX_PARTITION_OBJECT]
                 if isinstance(home_obj, SystemPartition):
                     home_obj = home_obj.partition
             elif point == '/':
                 root_obj = row[INDEX_PARTITION_OBJECT]
+                root_fs = row[INDEX_PARTITION_TYPE]
                 if isinstance(root_obj, SystemPartition):
                     root_obj = root_obj.partition
 
-        self.info.strategy.set_root_partition(root_obj)
-        self.info.strategy.set_home_partition(home_obj, home_format)
+        self.info.strategy.set_root_partition(root_obj, root_fs)
+        self.info.strategy.set_home_partition(home_obj, home_format, home_fs)
         self.info.strategy.set_swap_partition(swap_obj, swap_format)
         # Now we can go forward.
         self.selection_label.set_markup(labe)
