@@ -157,6 +157,7 @@ class ManualPage(Gtk.Box):
         model = self.treeview.get_model()
         row = model[path]
         fs = row[INDEX_PARTITION_TYPE]
+        row[INDEX_PARTITION_TYPE] = text
         self.update_selection()
 
     def on_format_toggled(self, widget, path):
