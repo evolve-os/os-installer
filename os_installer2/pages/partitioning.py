@@ -89,6 +89,10 @@ class ManualPage(Gtk.Box):
         self.store_mountpoints.append(["swap", "swap"])
         self.store_mountpoints.append([NO_HAZ_ASSIGN, NO_HAZ_ASSIGN])
 
+        self.store_filesystems = Gtk.ListStore(str, str)
+        self.store_filesystems.append(["ext4", "ext4"])
+        self.store_filesystems.append(["xfs", "xfs"])
+
         self.treeview = Gtk.TreeView()
         self.scrl = Gtk.ScrolledWindow(None, None)
         self.scrl.add(self.treeview)
@@ -103,7 +107,14 @@ class ManualPage(Gtk.Box):
         self.column3.add_attribute(ren, "markup", INDEX_PARTITION_PATH)
         self.treeview.append_column(self.column3)
 
-        self.column4 = Gtk.TreeViewColumn("Current filesystem", ren)
+        # filesystem selection
+        ren = Gtk.CellRendererCombo()
+        ren.set_property("editable", True)
+        ren.set_property("model", self.store_filesystems)
+        ren.set_property("has-entry", False)
+        ren.set_property("text-column", 0)
+        ren.connect("edited", self.on_filesystem_changed)
+        self.column4 = Gtk.TreeViewColumn("Filesystem", ren)
         self.column4.add_attribute(ren, "markup", INDEX_PARTITION_TYPE)
         self.treeview.append_column(self.column4)
 
@@ -141,6 +152,12 @@ class ManualPage(Gtk.Box):
         self.column9 = Gtk.TreeViewColumn("Free space", ren)
         self.column9.add_attribute(ren, "markup", INDEX_PARTITION_FREE_SPACE)
         self.treeview.append_column(self.column9)
+
+    def on_filesystem_changed(self, widget, path, text):
+        model = self.treeview.get_model()
+        row = model[path]
+        fs = row[INDEX_PARTITION_TYPE]
+        self.update_selection()
 
     def on_format_toggled(self, widget, path):
         model = self.treeview.get_model()
