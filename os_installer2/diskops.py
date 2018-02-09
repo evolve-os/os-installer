@@ -700,7 +700,8 @@ class DiskOpFormatRoot(DiskOpFormatPartition):
         if self.format_type == "ext4":
             cmd = "mkfs.ext4 -F {}".format(self.part.path)
         elif self.format_type == "xfs":
-            cmd = "xfs -f {}".format(self.part.path)
+            cmd = "mkfs.xfs -f {}".format(self.part.path)
+            
         try:
             subprocess.check_call(cmd, shell=True)
         except Exception as e:
@@ -726,7 +727,8 @@ class DiskOpFormatRootLate(DiskOpFormatPartition):
         if self.format_type == "ext4":
             cmd = "mkfs.ext4 -F {}".format(self.part.path)
         elif self.format_type == "xfs":
-            cmd = "xfs -f {}".format(self.part.path)
+            cmd = "mkfs.xfs -f {}".format(self.part.path)
+
         try:
             subprocess.check_call(cmd, shell=True)
         except Exception as e:
@@ -798,7 +800,7 @@ class DiskOpFormatHome(DiskOpFormatPartition):
         if self.format_type == "ext4":
             cmd = "mkfs.ext4 -F {}".format(self.part.path)
         elif self.format_type == "xfs":
-            cmd = "xfs -f {}".format(self.part.path)
+            cmd = "mkfs.xfs -f {}".format(self.part.path)
         
         try:
             subprocess.check_call(cmd, shell=True)
