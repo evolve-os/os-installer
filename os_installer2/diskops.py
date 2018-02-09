@@ -686,7 +686,7 @@ class DiskOpFormatRoot(DiskOpFormatPartition):
     """ Format the root partition """
 
     def __init__(self, device, part, format_type):
-        self.fstype = fstype
+        self.format_type = format_type
         DiskOpFormatPartition.__init__(self, device, part, format_type)
 
     def describe(self):
@@ -812,18 +812,18 @@ class DiskOpUseHome(BaseDiskOp):
     """ Use an existing home paritition """
 
     home_part = None
-    home_part_fs = None
+    part_type = None
     path = None
 
-    def __init__(self, device, home_part, home_part_fs):
+    def __init__(self, device, home_part, part_type):
         BaseDiskOp.__init__(self, device)
         self.home_part = home_part
         self.path = self.home_part.path
-        self.home_part_fs = home_part_fs
+        self.part_type = part_type
 
     def describe(self):
         return "Use {} ({}) as home partition".format(self.home_part.path,
-                                                      self.home_part_fs)
+                                                      self.part_type)
 
     def apply(self, disk, simulate):
         """ Can't actually fail here. """

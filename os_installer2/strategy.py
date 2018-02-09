@@ -363,7 +363,7 @@ class EmptyDiskStrategy(DiskStrategy):
             self.push_operation(lv_op)
             # Format the root partition
             self.push_operation(DiskOpFormatRootLate(
-                self.drive.device, DummyPart(lv_op.path)))
+                self.drive.device, DummyPart(lv_op.path), "ext4"))
 
             return
 
@@ -668,7 +668,7 @@ class ReplaceOSStrategy(DiskStrategy):
 
         # Create root
         op = DiskOpFormatRoot(self.drive.device,
-                              self.candidate_part.partition)
+                              self.candidate_part.partition, "ext4")
         self.push_operation(op)
 
     def get_root_partition(self):
@@ -687,6 +687,7 @@ class UserPartitionStrategy(DiskStrategy):
     priority = 10
 
     root_part = None
+    root_fstype = None
     home_part = None
     home_format = False
     home_fstype = None
@@ -709,7 +710,7 @@ class UserPartitionStrategy(DiskStrategy):
     def set_root_partition(self, part, fstype):
         """ Set the root partition to use """
         self.root_part = part
-        self.home_fstype = fstype
+        self.root_fstype = fstype
 
     def set_home_partition(self, part, fmt, fstype):
         """ Set the home partition to use and maybe format """
@@ -759,7 +760,7 @@ class UserPartitionStrategy(DiskStrategy):
         if not self.root_part:
             return
         dev = self.find_device(info.prober, self.root_part)
-        self.push_operation(DiskOpFormatRoot(dev, self.root_part))
+        self.push_operation(DiskOpFormatRoot(dev, self.root_part, self.root_fstype))
 
         if self.swap_part:
             dev = self.find_device(info.prober, self.swap_part)
