@@ -199,7 +199,7 @@ class SystemPartition(GObject.Object):
             if self.min_size < self.usedspace:
                 self.min_size = self.usedspace
             self.resizable = True
-            break        
+            break
 
     def __init__(self, partition, mount_point, dm):
         GObject.GObject.__init__(self)
