@@ -20,5 +20,6 @@ default_locales = [
     "zh_CN.UTF-8",
     "ja_JP.UTF-8",
     "ru_RU.UTF-8",
-    "ar_EG.UTF-8"
+    "ar_EG.UTF-8",
+    "nb_NO.UTF-8",
 ]
