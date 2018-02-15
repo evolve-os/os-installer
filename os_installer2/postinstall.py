@@ -372,7 +372,7 @@ class PostInstallUsers(PostInstallStep):
         PostInstallStep.__init__(self, info, installer)
 
         self.normal_groups = [
-            "audio,"
+            "audio",
             "video",
             "cdrom",
             "dialout",
