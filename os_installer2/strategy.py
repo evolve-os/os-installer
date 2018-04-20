@@ -363,7 +363,7 @@ class EmptyDiskStrategy(DiskStrategy):
             self.push_operation(lv_op)
             # Format the root partition
             self.push_operation(DiskOpFormatRootLate(
-                self.drive.device, DummyPart(lv_op.path)))
+                self.drive.device, DummyPart(lv_op.path), "ext4"))
 
             return
 
@@ -668,7 +668,7 @@ class ReplaceOSStrategy(DiskStrategy):
 
         # Create root
         op = DiskOpFormatRoot(self.drive.device,
-                              self.candidate_part.partition)
+                              self.candidate_part.partition, "ext4")
         self.push_operation(op)
 
     def get_root_partition(self):
@@ -687,8 +687,10 @@ class UserPartitionStrategy(DiskStrategy):
     priority = 10
 
     root_part = None
+    root_fstype = None
     home_part = None
     home_format = False
+    home_fstype = None
     swap_part = None
     swap_format = False
 
@@ -705,14 +707,16 @@ class UserPartitionStrategy(DiskStrategy):
                 return op.part.path
         return None
 
-    def set_root_partition(self, part):
+    def set_root_partition(self, part, fstype):
         """ Set the root partition to use """
         self.root_part = part
+        self.root_fstype = fstype
 
-    def set_home_partition(self, part, fmt):
+    def set_home_partition(self, part, fmt, fstype):
         """ Set the home partition to use and maybe format """
         self.home_part = part
         self.home_format = fmt
+        self.home_fstype = fstype
 
     def set_swap_partition(self, part, fmt):
         """ Set the swap partition to use and maybe format """
@@ -756,7 +760,7 @@ class UserPartitionStrategy(DiskStrategy):
         if not self.root_part:
             return
         dev = self.find_device(info.prober, self.root_part)
-        self.push_operation(DiskOpFormatRoot(dev, self.root_part))
+        self.push_operation(DiskOpFormatRoot(dev, self.root_part, self.root_fstype))
 
         if self.swap_part:
             dev = self.find_device(info.prober, self.swap_part)
@@ -768,11 +772,11 @@ class UserPartitionStrategy(DiskStrategy):
         if self.home_part:
             dev = self.find_device(info.prober, self.home_part)
             if not self.home_format:
-                fmt = self.find_format(info.prober, self.home_part)
-                self.push_operation(DiskOpUseHome(dev, self.home_part, fmt))
+                self.home_fstype = self.find_format(info.prober, self.home_part)
+                self.push_operation(DiskOpUseHome(dev, self.home_part, self.home_fstype))
             else:
-                self.push_operation(DiskOpFormatHome(dev, self.home_part))
-                self.push_operation(DiskOpUseHome(dev, self.home_part, "ext4"))
+                self.push_operation(DiskOpFormatHome(dev, self.home_part, self.home_fstype))
+                self.push_operation(DiskOpUseHome(dev, self.home_part, self.home_fstype))
 
 
 class DiskStrategyManager:
