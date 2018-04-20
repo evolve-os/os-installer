@@ -814,18 +814,18 @@ class DiskOpUseHome(BaseDiskOp):
     """ Use an existing home paritition """
 
     home_part = None
-    part_type = None
+    home_part_fs = None
     path = None
 
     def __init__(self, device, home_part, part_type):
         BaseDiskOp.__init__(self, device)
         self.home_part = home_part
         self.path = self.home_part.path
-        self.part_type = part_type
+        self.home_part_fs = home_part_fs
 
     def describe(self):
         return "Use {} ({}) as home partition".format(self.home_part.path,
-                                                      self.part_type)
+                                                      self.home_part_fs)
 
     def apply(self, disk, simulate):
         """ Can't actually fail here. """
