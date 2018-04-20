@@ -150,10 +150,12 @@ class PostInstallRemoveLiveConfig(PostInstallStep):
         return "Removing live configuration"
 
     def apply(self):
+        print("Removing live user")
         # Forcibly remove the user (TODO: Make all this configurable... )
         if not self.run_in_chroot("userdel -fr live"):
             return False
 
+        print("Removing live packages")
         # Return live-specific packages
         cmd_remove = "eopkg remove {} --ignore-comar".format(
             " ".join(self.live_packages))
