@@ -817,7 +817,7 @@ class DiskOpUseHome(BaseDiskOp):
     home_part_fs = None
     path = None
 
-    def __init__(self, device, home_part, part_type):
+    def __init__(self, device, home_part, home_part_fs):
         BaseDiskOp.__init__(self, device)
         self.home_part = home_part
         self.path = self.home_part.path
