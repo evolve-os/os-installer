@@ -407,9 +407,11 @@ class ManualPage(Gtk.Box):
 
         home_format = False
         home_obj = None
+        home_fs = None
         swap_format = False
         swap_obj = None
         root_obj = None
+        root_fs = None
         model = self.treeview.get_model()
         for row in model:
             point = row[INDEX_PARTITION_MOUNT_AS]
