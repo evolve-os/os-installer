@@ -586,6 +586,7 @@ class PostInstallFstab(PostInstallStep):
         appends = []
 
         ext4_ops = "rw,relatime,errors=remount-ro"
+        xfs_ops = "rw,relatime,inode64,nobarrier"
 
         for op in strat.get_operations():
             # TODO: Add custom mountpoints here!
@@ -596,7 +597,10 @@ class PostInstallFstab(PostInstallStep):
                 desc = "# {} at time of installation".format(op.home_part.path)
                 i = "UUID={}\t/home\t{}\t{}\t0\t2"
                 appends.append(desc)
-                appends.append(i.format(huuid, fs, ext4_ops))
+                if fs == "ext4":
+                    appends.append(i.format(huuid, fs, ext4_ops))
+                elif fs == "xfs":
+                    appends.append(i.format(huuid, fs, xfs_ops))
                 continue
             elif isinstance(op, DiskOpCreateBoot):
                 buuid = get_part_uuid(op.part.path)
@@ -604,7 +608,10 @@ class PostInstallFstab(PostInstallStep):
                 desc = "# {} at time of installation".format(op.part.path)
                 i = "UUID={}\t/boot\t{}\t{}\t0\t2"
                 appends.append(desc)
-                appends.append(i.format(buuid, fs, ext4_ops))
+                if fs == "ext4":
+                    appends.append(i.format(buuid, fs, ext4_ops))
+                elif fs == "xfs":
+                    appends.append(i.format(buuid, fs, xfs_ops))
                 continue
             if disk.type == "gpt" and strat.is_uefi():
                 continue
@@ -629,9 +636,13 @@ class PostInstallFstab(PostInstallStep):
         # Add the root partition last
         root = strat.get_root_partition()
         uuid = get_part_uuid(root)
+        root_fs = strat.root_fstype
         appends.append("# {} at time of installation".format(root))
 
-        appends.append("UUID={}\t/\text4\t{}\t0\t1".format(uuid, ext4_ops))
+        if root_fs == "ext4":
+            appends.append("UUID={}\t/\t{}\t{}\t0\t1".format(uuid, root_fs, ext4_ops))
+        elif root_fs == "xfs":
+            appends.append("UUID={}\t/\t{}\t{}\t0\t1".format(uuid, root_fs, xfs_ops))
 
         fp = os.path.join(self.installer.get_installer_target_filesystem(),
                           "etc/fstab")
