@@ -15,6 +15,7 @@ from .basepage import BasePage
 from gi.repository import Gtk
 from os_installer2.users import User, USERNAME_REGEX, PASSWORD_LENGTH
 import re
+import unicodedata
 
 LABEL_COLUMN = 0
 DATA_COLUMN = 1
@@ -74,7 +75,18 @@ class NewUserPage(Gtk.Grid):
         return False
 
     def validator(self, entry):
-        if entry == self.uname_field:
+        if entry == self.rname_field:
+            if not self.is_bad_field(self.rname_field):
+                self.rname_field.set_icon_from_icon_name(
+                    Gtk.EntryIconPosition.SECONDARY, "emblem-ok-symbolic")
+                self.update_score(self.rname_field, True)
+            else:
+                # Bad realname
+                self.rname_field.set_icon_from_icon_name(
+                    Gtk.EntryIconPosition.SECONDARY,
+                    "action-unavailable-symbolic")
+                self.update_score(self.rname_field, False)
+        elif entry == self.uname_field:
             # Perform username validation
             if self.username_regex.match(entry.get_text()):
                 self.uname_field.set_icon_from_icon_name(
@@ -86,17 +98,6 @@ class NewUserPage(Gtk.Grid):
                     Gtk.EntryIconPosition.SECONDARY,
                     "action-unavailable-symbolic")
                 self.update_score(self.uname_field, False)
-        elif entry == self.rname_field:
-            if not self.is_bad_field(self.rname_field):
-                self.rname_field.set_icon_from_icon_name(
-                    Gtk.EntryIconPosition.SECONDARY, "emblem-ok-symbolic")
-                self.update_score(self.rname_field, True)
-            else:
-                # Bad realname
-                self.rname_field.set_icon_from_icon_name(
-                    Gtk.EntryIconPosition.SECONDARY,
-                    "action-unavailable-symbolic")
-                self.update_score(self.rname_field, False)
         else:
             # Handle the two password fields together
             pass1 = self.pword_field.get_text()
@@ -124,6 +125,18 @@ class NewUserPage(Gtk.Grid):
                     "action-unavailable-symbolic")
                 self.update_score(self.pword_field2, False)
 
+    def suggest_username(self, entry):
+        # Convert to unicode
+        uname = unicode(self.rname_field.get_text(), "utf-8")
+        # Make lowercase
+        uname = uname.lower()
+        # Normalize non-ascii characters
+        uname = unicodedata.normalize("NFKD", uname)
+        # Only allow alphanumeric symbols, without spaces
+        uname = re.sub("[^-a-z0-9_]", "", uname)
+
+        self.uname_field.set_text(uname)
+
     def update_score(self, widget, score):
         """ Update the score for validation """
         if widget not in self.scores:
@@ -150,19 +163,20 @@ class NewUserPage(Gtk.Grid):
         self.username_regex = re.compile(USERNAME_REGEX)
 
         row = 0
+        rname_label = Gtk.Label("Real name:")
+        self.rname_field = Gtk.Entry()
+        self.rname_field.connect("changed", self.validator)
+        self.rname_field.connect("changed", self.suggest_username)
+        self.attach(rname_label, LABEL_COLUMN, row, 1, 1)
+        self.attach(self.rname_field, DATA_COLUMN, row, 1, 1)
+
+        row += 1
         uname_label = Gtk.Label("Username:")
         self.uname_field = Gtk.Entry()
         self.uname_field.set_hexpand(True)
         self.uname_field.connect("changed", self.validator)
         self.attach(uname_label, LABEL_COLUMN, row, 1, 1)
         self.attach(self.uname_field, DATA_COLUMN, row, 1, 1)
-
-        row += 1
-        rname_label = Gtk.Label("Real name:")
-        self.rname_field = Gtk.Entry()
-        self.rname_field.connect("changed", self.validator)
-        self.attach(rname_label, LABEL_COLUMN, row, 1, 1)
-        self.attach(self.rname_field, DATA_COLUMN, row, 1, 1)
 
         row += 1
         pword_label = Gtk.Label("Password:")
