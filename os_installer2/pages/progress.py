@@ -505,6 +505,7 @@ class InstallerProgressPage(BasePage):
         return True
 
     def round_up_next_block(self, num, size):
+        """ Given an end sector and blocksize, round to the block """
         mod = num % size
         return num + size - mod
 
