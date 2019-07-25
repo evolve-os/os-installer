@@ -504,6 +504,10 @@ class InstallerProgressPage(BasePage):
             return False
         return True
 
+    def round_up_next_block(self, num, size):
+        mod = num % size
+        return num + size - mod
+
     def apply_disk_strategy(self, simulate):
         """ Attempt to apply the given disk strategy """
         strategy = self.info.strategy
@@ -524,12 +528,11 @@ class InstallerProgressPage(BasePage):
             disk = disk.duplicate()
 
         part_offset = 0
-        part_step = parted.sizeToSectors(16, 'kB', strategy.device.sectorSize)
+        part_step = parted.sizeToSectors(1, 'MiB', strategy.device.sectorSize)
         if disk:
             # Start at the very beginning of the disk, we don't
             # support free-space installation
-            part_offset = disk.getFirstPartition().geometry.end + part_step
-
+            part_offset = self.round_up_next_block(disk.getFirstPartition().geometry.end, part_step)
         for op in ops:
             self.set_display_string(op.describe())
             op.set_part_offset(part_offset)
@@ -545,12 +548,12 @@ class InstallerProgressPage(BasePage):
                 if not strategy.disk:
                     strategy.disk = disk
                 # Now set the part offset
-                part_offset = disk.getFirstPartition().geometry.end + part_step
+                part_offset = self.round_up_next_block(disk.getFirstPartition().geometry.end, part_step)
             elif isinstance(op, DiskOpResizeOS):
-                part_offset = op.new_part_off + part_step
+                part_offset = self.round_up_next_block(op.new_part_off, part_step)
             elif isinstance(op, DiskOpCreatePartition):
                 # Push forward the offset
-                part_offset = op.part_end + part_step
+                part_offset = self.round_up_next_block(op.part_end,part_step)
 
         if simulate:
             return True

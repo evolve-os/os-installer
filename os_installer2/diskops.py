@@ -119,6 +119,11 @@ class DiskOpCreatePartition(BaseDiskOp):
     def describe(self):
         return "I should be described by my children. ._."
 
+    def calc_length(self, offset, length, size):
+        """ See if length can be extended in alignment """
+        mod = (offset + length) % size
+        return length + size - mod
+
     def apply(self, disk, simulate):
         """ Create a partition with the given type... """
         try:
@@ -126,8 +131,12 @@ class DiskOpCreatePartition(BaseDiskOp):
                 raise RuntimeError("Cannot create partition on empty disk!")
             length = parted.sizeToSectors(
                 self.size, 'B', disk.device.sectorSize)
+            block_length = parted.sizeToSectors(1, 'MiB', disk.device.sectorSize)
             geom = parted.Geometry(
                 device=self.device, start=self.part_offset, length=length)
+
+            # extend the length to align.  Not necessary but doesnt waste a couple mbs
+            geom.length = self.calc_length(self.part_offset, length, block_length)
 
             # Don't run off the end of the disk ...
             geom_cmp = self.get_all_remaining_geom(
